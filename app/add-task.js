@@ -14,14 +14,15 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, FadeInRight } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
 import { TaskContext } from '../context/TaskContext';
-import { colors, spacing, borderRadius, typography, categories, priorities } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, borderRadius, typography, categories, priorities } from '../constants/theme';
 import GradientButton from '../components/GradientButton';
 import DatePickerButton from '../components/DatePickerButton';
 import ReminderToggle from '../components/ReminderToggle';
@@ -41,8 +42,9 @@ const safeHaptics = {
 };
 
 export default function AddTask() {
-  const navigation = useNavigation();
+  const router = useRouter();
   const { addTask } = useContext(TaskContext);
+  const { colors } = useTheme();
   
   const [title, setTitle] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('personal');
@@ -67,16 +69,15 @@ export default function AddTask() {
     });
     
     safeHaptics.notification(Haptics.NotificationFeedbackType.Success);
-    navigation.goBack();
+    router.back();
   };
-
 
   // Filter out 'all' category
   const taskCategories = Object.values(categories).filter(c => c.id !== 'all');
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header */}
@@ -85,12 +86,12 @@ export default function AddTask() {
         entering={FadeInUp.springify()}
       >
         <Pressable 
-          style={styles.closeButton}
-          onPress={() => navigation.goBack()}
+          style={[styles.closeButton, { backgroundColor: colors.glassMedium }]}
+          onPress={() => router.back()}
         >
           <Ionicons name="close" size={24} color={colors.textSecondary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Nueva Tarea</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Nueva Tarea</Text>
         <View style={styles.placeholder} />
       </Animated.View>
 
@@ -103,9 +104,9 @@ export default function AddTask() {
           style={styles.inputSection}
           entering={FadeInUp.delay(100).springify()}
         >
-          <Text style={styles.label}>¿Qué necesitas hacer?</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>¿Qué necesitas hacer?</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder, color: colors.textPrimary }]}
             placeholder="Escribe tu tarea..."
             placeholderTextColor={colors.textTertiary}
             value={title}
@@ -121,7 +122,7 @@ export default function AddTask() {
           style={styles.section}
           entering={FadeInUp.delay(200).springify()}
         >
-          <Text style={styles.label}>Categoría</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Categoría</Text>
           <View style={styles.optionsGrid}>
             {taskCategories.map((category, index) => (
               <Animated.View
@@ -131,6 +132,7 @@ export default function AddTask() {
                 <Pressable
                   style={[
                     styles.optionCard,
+                    { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder },
                     selectedCategory === category.id && {
                       backgroundColor: category.color + '20',
                       borderColor: category.color,
@@ -153,6 +155,7 @@ export default function AddTask() {
                   </View>
                   <Text style={[
                     styles.optionText,
+                    { color: colors.textSecondary },
                     selectedCategory === category.id && { color: category.color }
                   ]}>
                     {category.name}
@@ -168,7 +171,7 @@ export default function AddTask() {
           style={styles.section}
           entering={FadeInUp.delay(300).springify()}
         >
-          <Text style={styles.label}>Fecha límite</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Fecha límite</Text>
           <DatePickerButton 
             value={dueDate}
             onChange={(date) => {
@@ -201,7 +204,7 @@ export default function AddTask() {
           style={styles.section}
           entering={FadeInUp.delay(350).springify()}
         >
-          <Text style={styles.label}>Prioridad</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Prioridad</Text>
           <View style={styles.priorityRow}>
             {Object.values(priorities).map((priority, index) => (
               <Animated.View
@@ -212,6 +215,7 @@ export default function AddTask() {
                 <Pressable
                   style={[
                     styles.priorityCard,
+                    { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder },
                     selectedPriority === priority.id && {
                       backgroundColor: priority.color + '20',
                       borderColor: priority.color,
@@ -229,6 +233,7 @@ export default function AddTask() {
                   />
                   <Text style={[
                     styles.priorityText,
+                    { color: colors.textSecondary },
                     selectedPriority === priority.id && { color: priority.color }
                   ]}>
                     {priority.name}
@@ -242,7 +247,7 @@ export default function AddTask() {
 
       {/* Submit Button */}
       <Animated.View 
-        style={styles.footer}
+        style={[styles.footer, { backgroundColor: colors.bgPrimary }]}
         entering={FadeInUp.delay(400).springify()}
       >
         <Pressable style={styles.submitButton} onPress={handleSubmit}>
@@ -253,7 +258,7 @@ export default function AddTask() {
             style={styles.submitGradient}
           >
             <Ionicons name="add" size={24} color={colors.white} />
-            <Text style={styles.submitText}>Crear Tarea</Text>
+            <Text style={[styles.submitText, { color: colors.white }]}>Crear Tarea</Text>
           </LinearGradient>
         </Pressable>
       </Animated.View>
@@ -264,7 +269,6 @@ export default function AddTask() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
   },
   
   header: {
@@ -280,7 +284,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.glassMedium,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -288,7 +291,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
   },
   
   placeholder: {
@@ -311,20 +313,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
     marginBottom: spacing.md,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   
   input: {
-    backgroundColor: colors.glassMedium,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     padding: spacing.lg,
     fontSize: typography.fontSize.lg,
-    color: colors.textPrimary,
     minHeight: 80,
     textAlignVertical: 'top',
   },
@@ -340,10 +338,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.glassMedium,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     gap: spacing.sm,
   },
   
@@ -358,7 +354,6 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
   },
   
   priorityRow: {
@@ -373,17 +368,14 @@ const styles = StyleSheet.create({
   priorityCard: {
     alignItems: 'center',
     paddingVertical: spacing.lg,
-    backgroundColor: colors.glassMedium,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     gap: spacing.sm,
   },
   
   priorityText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
   },
   
   footer: {
@@ -407,6 +399,5 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
   },
 });

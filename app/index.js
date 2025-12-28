@@ -12,7 +12,7 @@ import {
   StatusBar,
   RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import Animated, { FadeInUp, LinearTransition } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -29,7 +29,7 @@ import FAB from '../components/FAB';
 import SearchBar from '../components/SearchBar';
 
 export default function Index() {
-  const navigation = useNavigation();
+  const router = useRouter();
   const { tasks, deleteTask, toggleCompleted, loading } = useContext(TaskContext);
   const { isDarkMode, colors } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -143,7 +143,7 @@ export default function Index() {
                 task={item}
                 onToggle={toggleCompleted}
                 onDelete={deleteTask}
-                onPress={() => navigation.navigate('task-details', { taskId: item.id })}
+                onPress={() => router.push(`/task-details?taskId=${item.id}`)}
               />
             </Animated.View>
           </>
@@ -151,7 +151,7 @@ export default function Index() {
       />
       
       {/* Floating Action Button */}
-      <FAB onPress={() => navigation.navigate('add-task')} />
+      <FAB onPress={() => router.push('/add-task')} />
     </GestureHandlerRootView>
   );
 }
@@ -159,7 +159,6 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
   },
   
   listContent: {
@@ -177,14 +176,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   
   countBadge: {
     marginLeft: spacing.sm,
-    backgroundColor: colors.glassMedium,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: spacing.sm,
@@ -193,7 +190,6 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textSecondary,
   },
   
   emptyState: {
@@ -211,13 +207,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   
   emptySubtitle: {
     fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
   },

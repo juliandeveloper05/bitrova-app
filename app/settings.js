@@ -16,7 +16,7 @@ import {
   Platform,
   Linking,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -79,7 +79,7 @@ const SectionHeader = ({ title, delay = 0, colors }) => (
 );
 
 export default function Settings() {
-  const navigation = useNavigation();
+  const router = useRouter();
   const { tasks, notificationsEnabled } = useContext(TaskContext);
   const { isDarkMode, toggleTheme, colors } = useTheme();
   
@@ -149,7 +149,7 @@ export default function Settings() {
       >
         <TouchableOpacity 
           style={[styles.backButton, { backgroundColor: colors.glassMedium }]}
-          onPress={() => navigation.goBack()}
+          onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
@@ -273,7 +273,6 @@ export default function Settings() {
           delay={360}
           colors={colors}
         />
-
 
         {/* Behavior Section */}
         <SectionHeader title="COMPORTAMIENTO" delay={400} colors={colors} />
@@ -447,7 +446,6 @@ export default function Settings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
   },
 
   header: {
@@ -463,7 +461,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.glassMedium,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -471,7 +468,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
   },
 
   headerRight: {
@@ -491,12 +487,10 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.glassLight,
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
     marginBottom: spacing.xl,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
   },
 
   avatarGradient: {
@@ -519,20 +513,17 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
 
   profileStats: {
     fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
   },
 
   editProfileButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.glassMedium,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -541,7 +532,6 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textTertiary,
     letterSpacing: 1.5,
     marginTop: spacing.lg,
     marginBottom: spacing.md,
@@ -552,12 +542,10 @@ const styles = StyleSheet.create({
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.glassLight,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
   },
 
   iconContainer: {
@@ -576,12 +564,10 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textPrimary,
   },
 
   settingSubtitle: {
     fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
     marginTop: 2,
   },
 
@@ -599,7 +585,6 @@ const styles = StyleSheet.create({
 
   // Version Badge
   versionBadge: {
-    backgroundColor: colors.accentPurple + '30',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
@@ -608,7 +593,6 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.bold,
-    color: colors.accentPurple,
   },
 
   // Footer
@@ -620,13 +604,11 @@ const styles = StyleSheet.create({
 
   footerText: {
     fontSize: typography.fontSize.sm,
-    color: colors.textTertiary,
     marginBottom: spacing.xs,
   },
 
   madeWith: {
     fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
     marginBottom: spacing.lg,
   },
 
@@ -643,6 +625,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.glassBorder,
   },
 });

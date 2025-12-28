@@ -14,16 +14,18 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, FadeInRight } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
 import { TaskContext } from '../context/TaskContext';
-import { colors, spacing, borderRadius, typography, categories, priorities } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, borderRadius, typography, categories, priorities } from '../constants/theme';
 import DatePickerButton from '../components/DatePickerButton';
 import ReminderToggle from '../components/ReminderToggle';
+import SubtaskItem from '../components/SubtaskItem';
 
 // Safe haptics wrapper for web compatibility
 const safeHaptics = {
@@ -40,10 +42,10 @@ const safeHaptics = {
 };
 
 export default function TaskDetails() {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { taskId } = route.params || {};
-  const { tasks, updateTask, deleteTask, toggleCompleted } = useContext(TaskContext);
+  const router = useRouter();
+  const { taskId } = useLocalSearchParams();
+  const { tasks, updateTask, deleteTask, toggleCompleted, addSubtask, toggleSubtask, deleteSubtask } = useContext(TaskContext);
+  const { colors } = useTheme();
   
   // Find the task
   const task = tasks.find(t => t.id === taskId);
@@ -55,6 +57,7 @@ export default function TaskDetails() {
   const [dueDate, setDueDate] = useState(null);
   const [enableReminder, setEnableReminder] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [newSubtaskText, setNewSubtaskText] = useState('');
   
   // Initialize state when task loads
   useEffect(() => {
@@ -82,10 +85,10 @@ export default function TaskDetails() {
   
   if (!task) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.errorText}>Tarea no encontrada</Text>
-        <Pressable style={styles.backLink} onPress={() => navigation.goBack()}>
-          <Text style={styles.backLinkText}>Volver</Text>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, styles.centered]}>
+        <Text style={[styles.errorText, { color: colors.textSecondary }]}>Tarea no encontrada</Text>
+        <Pressable style={styles.backLink} onPress={() => router.back()}>
+          <Text style={[styles.backLinkText, { color: colors.accentPurple }]}>Volver</Text>
         </Pressable>
       </View>
     );
@@ -106,14 +109,14 @@ export default function TaskDetails() {
     });
     
     safeHaptics.notification(Haptics.NotificationFeedbackType.Success);
-    navigation.goBack();
+    router.back();
   };
 
   const handleDelete = () => {
     const performDelete = () => {
       deleteTask(taskId);
       safeHaptics.notification(Haptics.NotificationFeedbackType.Success);
-      navigation.goBack();
+      router.back();
     };
 
     if (Platform.OS === 'web') {
@@ -155,21 +158,21 @@ export default function TaskDetails() {
   const priority = priorities[task.priority] || priorities.medium;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
       {/* Header */}
       <Animated.View 
         style={styles.header}
         entering={FadeInUp.springify()}
       >
         <Pressable 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: colors.glassMedium }]}
+          onPress={() => router.back()}
         >
           <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Detalles</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Detalles</Text>
         <Pressable 
-          style={styles.deleteButton}
+          style={[styles.deleteButton, { backgroundColor: colors.error + '15' }]}
           onPress={handleDelete}
         >
           <Ionicons name="trash-outline" size={22} color={colors.error} />
@@ -187,13 +190,15 @@ export default function TaskDetails() {
           <Pressable 
             style={[
               styles.statusCard,
-              task.completed && styles.statusCardCompleted
+              { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder },
+              task.completed && { backgroundColor: colors.success + '10', borderColor: colors.success + '30' }
             ]}
             onPress={handleToggleComplete}
           >
             <View style={[
               styles.checkCircle,
-              task.completed && styles.checkCircleCompleted
+              { borderColor: colors.textTertiary },
+              task.completed && { backgroundColor: colors.success, borderColor: colors.success }
             ]}>
               {task.completed && (
                 <Ionicons name="checkmark" size={20} color={colors.white} />
@@ -201,7 +206,8 @@ export default function TaskDetails() {
             </View>
             <Text style={[
               styles.statusText,
-              task.completed && styles.statusTextCompleted
+              { color: colors.textPrimary },
+              task.completed && { color: colors.success }
             ]}>
               {task.completed ? 'Completada' : 'Pendiente'}
             </Text>
@@ -223,9 +229,9 @@ export default function TaskDetails() {
           style={styles.section}
           entering={FadeInUp.delay(100).springify()}
         >
-          <Text style={styles.label}>Título</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Título</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder, color: colors.textPrimary }]}
             placeholder="Nombre de la tarea"
             placeholderTextColor={colors.textTertiary}
             value={title}
@@ -240,10 +246,91 @@ export default function TaskDetails() {
           style={styles.section}
           entering={FadeInUp.delay(150).springify()}
         >
-          <Text style={styles.label}>Creada</Text>
-          <View style={styles.infoCard}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Creada</Text>
+          <View style={[styles.infoCard, { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder }]}>
             <Ionicons name="time-outline" size={18} color={colors.textTertiary} />
-            <Text style={styles.infoText}>{formatDate(task.createdAt)}</Text>
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>{formatDate(task.createdAt)}</Text>
+          </View>
+        </Animated.View>
+
+        {/* Subtasks Section */}
+        <Animated.View 
+          style={styles.section}
+          entering={FadeInUp.delay(175).springify()}
+        >
+          <View style={styles.subtasksHeader}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Subtareas</Text>
+            {task.subtasks && task.subtasks.length > 0 && (
+              <View style={[styles.subtasksProgress, { backgroundColor: colors.accentPurple + '20' }]}>
+                <Text style={[styles.subtasksProgressText, { color: colors.accentPurple }]}>
+                  {task.subtasks.filter(st => st.completed).length}/{task.subtasks.length}
+                </Text>
+              </View>
+            )}
+          </View>
+          
+          {/* Progress bar */}
+          {task.subtasks && task.subtasks.length > 0 && (
+            <View style={[styles.progressBarContainer, { backgroundColor: colors.glassMedium }]}>
+              <View 
+                style={[
+                  styles.progressBarFill, 
+                  { 
+                    backgroundColor: colors.accentPurple,
+                    width: `${(task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100}%`
+                  }
+                ]} 
+              />
+            </View>
+          )}
+          
+          {/* Add subtask input */}
+          <View style={[styles.addSubtaskContainer, { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder }]}>
+            <TextInput
+              style={[styles.addSubtaskInput, { color: colors.textPrimary }]}
+              placeholder="Agregar subtarea..."
+              placeholderTextColor={colors.textTertiary}
+              value={newSubtaskText}
+              onChangeText={setNewSubtaskText}
+              onSubmitEditing={() => {
+                if (newSubtaskText.trim()) {
+                  addSubtask(taskId, newSubtaskText);
+                  setNewSubtaskText('');
+                  safeHaptics.impact(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+              returnKeyType="done"
+            />
+            <Pressable 
+              style={[styles.addSubtaskButton, { backgroundColor: colors.accentPurple }]}
+              onPress={() => {
+                if (newSubtaskText.trim()) {
+                  addSubtask(taskId, newSubtaskText);
+                  setNewSubtaskText('');
+                  safeHaptics.impact(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+            >
+              <Ionicons name="add" size={20} color={colors.white} />
+            </Pressable>
+          </View>
+          
+          {/* Subtasks list */}
+          <View style={styles.subtasksList}>
+            {(task.subtasks || []).map((subtask) => (
+              <SubtaskItem
+                key={subtask.id}
+                subtask={subtask}
+                onToggle={() => {
+                  toggleSubtask(taskId, subtask.id);
+                  safeHaptics.impact(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                onDelete={() => {
+                  deleteSubtask(taskId, subtask.id);
+                  safeHaptics.impact(Haptics.ImpactFeedbackStyle.Medium);
+                }}
+              />
+            ))}
           </View>
         </Animated.View>
 
@@ -252,7 +339,7 @@ export default function TaskDetails() {
           style={styles.section}
           entering={FadeInUp.delay(200).springify()}
         >
-          <Text style={styles.label}>Categoría</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Categoría</Text>
           <View style={styles.optionsGrid}>
             {taskCategories.map((category, index) => (
               <Animated.View
@@ -262,6 +349,7 @@ export default function TaskDetails() {
                 <Pressable
                   style={[
                     styles.optionCard,
+                    { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder },
                     selectedCategory === category.id && {
                       backgroundColor: category.color + '20',
                       borderColor: category.color,
@@ -284,6 +372,7 @@ export default function TaskDetails() {
                   </View>
                   <Text style={[
                     styles.optionText,
+                    { color: colors.textSecondary },
                     selectedCategory === category.id && { color: category.color }
                   ]}>
                     {category.name}
@@ -299,7 +388,7 @@ export default function TaskDetails() {
           style={styles.section}
           entering={FadeInUp.delay(250).springify()}
         >
-          <Text style={styles.label}>Fecha límite</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Fecha límite</Text>
           <DatePickerButton 
             value={dueDate}
             onChange={(date) => {
@@ -331,7 +420,7 @@ export default function TaskDetails() {
           style={styles.section}
           entering={FadeInUp.delay(300).springify()}
         >
-          <Text style={styles.label}>Prioridad</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Prioridad</Text>
           <View style={styles.priorityRow}>
             {Object.values(priorities).map((priority, index) => (
               <Animated.View
@@ -342,6 +431,7 @@ export default function TaskDetails() {
                 <Pressable
                   style={[
                     styles.priorityCard,
+                    { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder },
                     selectedPriority === priority.id && {
                       backgroundColor: priority.color + '20',
                       borderColor: priority.color,
@@ -359,6 +449,7 @@ export default function TaskDetails() {
                   />
                   <Text style={[
                     styles.priorityText,
+                    { color: colors.textSecondary },
                     selectedPriority === priority.id && { color: priority.color }
                   ]}>
                     {priority.name}
@@ -376,7 +467,7 @@ export default function TaskDetails() {
       {/* Save Button - only show if changes */}
       {hasChanges && (
         <Animated.View 
-          style={styles.footer}
+          style={[styles.footer, { backgroundColor: colors.bgPrimary }]}
           entering={FadeInUp.springify()}
         >
           <Pressable style={styles.saveButton} onPress={handleSave}>
@@ -387,7 +478,7 @@ export default function TaskDetails() {
               style={styles.saveGradient}
             >
               <Ionicons name="checkmark" size={24} color={colors.white} />
-              <Text style={styles.saveText}>Guardar Cambios</Text>
+              <Text style={[styles.saveText, { color: colors.white }]}>Guardar Cambios</Text>
             </LinearGradient>
           </Pressable>
         </Animated.View>
@@ -399,7 +490,6 @@ export default function TaskDetails() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
   },
   
   centered: {
@@ -409,7 +499,6 @@ const styles = StyleSheet.create({
   
   errorText: {
     fontSize: typography.fontSize.lg,
-    color: colors.textSecondary,
     marginBottom: spacing.lg,
   },
   
@@ -419,7 +508,6 @@ const styles = StyleSheet.create({
   
   backLinkText: {
     fontSize: typography.fontSize.md,
-    color: colors.accentPurple,
   },
   
   header: {
@@ -435,7 +523,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.glassMedium,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -443,14 +530,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
   },
   
   deleteButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.error + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -467,7 +552,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
     marginBottom: spacing.md,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -476,18 +560,11 @@ const styles = StyleSheet.create({
   statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.glassMedium,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     padding: spacing.lg,
     marginBottom: spacing.xl,
     gap: spacing.md,
-  },
-  
-  statusCardCompleted: {
-    backgroundColor: colors.success + '10',
-    borderColor: colors.success + '30',
   },
   
   checkCircle: {
@@ -495,25 +572,14 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: colors.textTertiary,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  
-  checkCircleCompleted: {
-    backgroundColor: colors.success,
-    borderColor: colors.success,
   },
   
   statusText: {
     flex: 1,
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textPrimary,
-  },
-  
-  statusTextCompleted: {
-    color: colors.success,
   },
   
   statusBadge: {
@@ -525,13 +591,10 @@ const styles = StyleSheet.create({
   },
   
   input: {
-    backgroundColor: colors.glassMedium,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     padding: spacing.lg,
     fontSize: typography.fontSize.lg,
-    color: colors.textPrimary,
     minHeight: 60,
     textAlignVertical: 'top',
   },
@@ -539,17 +602,14 @@ const styles = StyleSheet.create({
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.glassMedium,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     padding: spacing.lg,
     gap: spacing.md,
   },
   
   infoText: {
     fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
   },
   
   optionsGrid: {
@@ -563,10 +623,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.glassMedium,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     gap: spacing.sm,
   },
   
@@ -581,7 +639,6 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
   },
   
   priorityRow: {
@@ -596,17 +653,14 @@ const styles = StyleSheet.create({
   priorityCard: {
     alignItems: 'center',
     paddingVertical: spacing.lg,
-    backgroundColor: colors.glassMedium,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     gap: spacing.sm,
   },
   
   priorityText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
   },
   
   footer: {
@@ -616,7 +670,6 @@ const styles = StyleSheet.create({
     right: 0,
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
-    backgroundColor: colors.bgPrimary,
   },
   
   saveButton: {
@@ -635,6 +688,65 @@ const styles = StyleSheet.create({
   saveText: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+  },
+  
+  // Subtasks styles
+  subtasksHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  
+  subtasksProgress: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+  },
+  
+  subtasksProgressText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  
+  progressBarContainer: {
+    height: 6,
+    borderRadius: 3,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  
+  addSubtaskContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  
+  addSubtaskInput: {
+    flex: 1,
+    fontSize: typography.fontSize.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  
+  addSubtaskButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  subtasksList: {
+    gap: spacing.sm,
   },
 });

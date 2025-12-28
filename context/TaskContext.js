@@ -1,5 +1,5 @@
 /**
- * TaskContext - Enhanced with Notifications
+ * TaskContext - Enhanced with Notifications and Subtasks
  * Task List App 2026
  */
 
@@ -34,7 +34,12 @@ export const TaskProvider = ({ children }) => {
   useEffect(() => {
     const loadData = async () => {
       const savedTasks = await loadTasks();
-      setTasks(savedTasks);
+      // Ensure all tasks have subtasks array for backwards compatibility
+      const tasksWithSubtasks = savedTasks.map(task => ({
+        ...task,
+        subtasks: task.subtasks || [],
+      }));
+      setTasks(tasksWithSubtasks);
       setLoading(false);
     };
     loadData();
@@ -53,6 +58,7 @@ export const TaskProvider = ({ children }) => {
       ...task, 
       id: Date.now().toString(),
       notificationId: null,
+      subtasks: task.subtasks || [],
     };
 
     // Schedule notification if task has due date and reminder is enabled
@@ -160,6 +166,80 @@ export const TaskProvider = ({ children }) => {
     return { total, completed, pending, highPriority, overdue };
   }, [tasks]);
 
+  /**
+   * Add a subtask to a task
+   */
+  const addSubtask = useCallback((taskId, title) => {
+    if (!title.trim()) return null;
+    
+    const newSubtask = {
+      id: Date.now().toString(),
+      title: title.trim(),
+      completed: false,
+    };
+
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, subtasks: [...(task.subtasks || []), newSubtask] }
+          : task
+      )
+    );
+
+    return newSubtask;
+  }, []);
+
+  /**
+   * Toggle subtask completion
+   */
+  const toggleSubtask = useCallback((taskId, subtaskId) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              subtasks: (task.subtasks || []).map((st) =>
+                st.id === subtaskId ? { ...st, completed: !st.completed } : st
+              ),
+            }
+          : task
+      )
+    );
+  }, []);
+
+  /**
+   * Delete a subtask
+   */
+  const deleteSubtask = useCallback((taskId, subtaskId) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              subtasks: (task.subtasks || []).filter((st) => st.id !== subtaskId),
+            }
+          : task
+      )
+    );
+  }, []);
+
+  /**
+   * Get subtask progress for a task
+   */
+  const getSubtaskProgress = useCallback((taskId) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || !task.subtasks || task.subtasks.length === 0) {
+      return { total: 0, completed: 0, percentage: 0 };
+    }
+    const total = task.subtasks.length;
+    const completed = task.subtasks.filter((st) => st.completed).length;
+    return {
+      total,
+      completed,
+      percentage: Math.round((completed / total) * 100),
+    };
+  }, [tasks]);
+
   return (
     <TaskContext.Provider
       value={{ 
@@ -169,6 +249,10 @@ export const TaskProvider = ({ children }) => {
         toggleCompleted, 
         updateTask,
         getStats,
+        addSubtask,
+        toggleSubtask,
+        deleteSubtask,
+        getSubtaskProgress,
         loading,
         notificationsEnabled,
       }}

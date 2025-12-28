@@ -38,6 +38,12 @@ export default function TaskCard({ task, onToggle, onDelete, onPress }) {
   const priority = priorities[task.priority] || priorities.medium;
   const category = categories[task.category] || categories.personal;
   
+  // Calculate subtask progress
+  const subtasks = task.subtasks || [];
+  const subtaskTotal = subtasks.length;
+  const subtaskCompleted = subtasks.filter(st => st.completed).length;
+  const hasSubtasks = subtaskTotal > 0;
+  
   // Format due date for display
   const formatDueDate = (dateString) => {
     if (!dateString) return null;
@@ -208,6 +214,19 @@ export default function TaskCard({ task, onToggle, onDelete, onPress }) {
                     </Text>
                   </View>
                 )}
+                
+                {/* Subtasks indicator */}
+                {hasSubtasks && (
+                  <View style={[
+                    styles.subtasksBadge,
+                    { backgroundColor: colors.accentPurple + '15' }
+                  ]}>
+                    <Ionicons name="list-outline" size={12} color={colors.accentPurple} />
+                    <Text style={[styles.subtasksText, { color: colors.accentPurple }]}>
+                      {subtaskCompleted}/{subtaskTotal}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
             
@@ -328,6 +347,20 @@ const styles = StyleSheet.create({
   },
   
   dueDate: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+  },
+  
+  subtasksBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.full,
+  },
+  
+  subtasksText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.medium,
   },

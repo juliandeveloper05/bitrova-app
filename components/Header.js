@@ -5,14 +5,14 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, typography } from '../constants/theme';
 
 export default function Header() {
-  const navigation = useNavigation();
+  const router = useRouter();
   const { colors } = useTheme();
   const today = new Date();
   const options = { weekday: 'long', day: 'numeric', month: 'long' };
@@ -40,7 +40,7 @@ export default function Header() {
       {/* Settings Button */}
       <TouchableOpacity 
         style={[styles.settingsButton, { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder }]}
-        onPress={() => navigation.navigate('settings')}
+        onPress={() => router.push('/settings')}
         activeOpacity={0.7}
       >
         <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
