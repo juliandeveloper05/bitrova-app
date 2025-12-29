@@ -27,6 +27,7 @@ import CategoryFilter from '../components/CategoryFilter';
 import TaskCard from '../components/TaskCard';
 import FAB from '../components/FAB';
 import SearchBar from '../components/SearchBar';
+import PomodoroWidget from '../components/PomodoroWidget';
 
 export default function Index() {
   const router = useRouter();
@@ -97,6 +98,9 @@ export default function Index() {
       
       {/* Stats Widget */}
       <StatsWidget tasks={tasks} />
+      
+      {/* Pomodoro Widget */}
+      <PomodoroWidget />
       
       {/* Category Filter */}
       <CategoryFilter 

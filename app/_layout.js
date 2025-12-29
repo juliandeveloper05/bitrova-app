@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { TaskProvider } from "../context/TaskContext";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
+import { PomodoroProvider } from "../context/PomodoroContext";
 import { StatusBar } from "expo-status-bar";
 
 // Inner component that uses theme context
@@ -37,6 +38,12 @@ function RootLayoutNav() {
             animation: "slide_from_right",
           }}
         />
+        <Stack.Screen 
+          name="pomodoro" 
+          options={{
+            animation: "slide_from_right",
+          }}
+        />
       </Stack>
     </>
   );
@@ -46,9 +53,11 @@ function RootLayoutNav() {
 export default function Layout() {
   return (
     <ThemeProvider>
-      <TaskProvider>
-        <RootLayoutNav />
-      </TaskProvider>
+      <PomodoroProvider>
+        <TaskProvider>
+          <RootLayoutNav />
+        </TaskProvider>
+      </PomodoroProvider>
     </ThemeProvider>
   );
 }
