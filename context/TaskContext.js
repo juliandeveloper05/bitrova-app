@@ -1,22 +1,30 @@
 /**
- * TaskContext - Enhanced with Notifications and Subtasks
+ * TaskContext - Enhanced with Recurring Tasks Support
  * Task List App 2026
  */
 
 import React, { createContext, useState, useEffect, useCallback, useContext } from "react";
 import { Platform } from "react-native";
-import { loadTasks, saveTasks } from "../utils/storage";
+import { loadTasks, saveTasks, loadRecurringSeries, saveRecurringSeries } from "../utils/storage";
 import {
   requestNotificationPermissions,
   scheduleTaskDueDateNotification,
   cancelNotification,
 } from "../utils/notifications";
 import { StatsContext } from "./StatsContext";
+import { 
+  createRecurringSeries as createSeriesUtil,
+  generateInstancesForSeries,
+  filterTasksByScope,
+  getAffectedInstanceCount,
+} from "../utils/recurringGenerator";
+import { validateRecurringConfig } from "../utils/recurringHelpers";
 
 export const TaskContext = createContext();
 
 export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
+  const [recurringSeries, setRecurringSeries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   
@@ -34,16 +42,26 @@ export const TaskProvider = ({ children }) => {
     initNotifications();
   }, []);
 
-  // Load tasks on startup
+  // Load tasks and recurring series on startup
   useEffect(() => {
     const loadData = async () => {
-      const savedTasks = await loadTasks();
-      // Ensure all tasks have subtasks array for backwards compatibility
-      const tasksWithSubtasks = savedTasks.map(task => ({
+      const [savedTasks, savedSeries] = await Promise.all([
+        loadTasks(),
+        loadRecurringSeries(),
+      ]);
+      
+      // Ensure all tasks have required fields for backwards compatibility
+      const tasksWithDefaults = savedTasks.map(task => ({
         ...task,
         subtasks: task.subtasks || [],
+        isRecurring: task.isRecurring || false,
+        recurringSeriesId: task.recurringSeriesId || null,
+        instanceDate: task.instanceDate || null,
+        skipped: task.skipped || false,
       }));
-      setTasks(tasksWithSubtasks);
+      
+      setTasks(tasksWithDefaults);
+      setRecurringSeries(savedSeries || []);
       setLoading(false);
     };
     loadData();
@@ -53,6 +71,11 @@ export const TaskProvider = ({ children }) => {
   useEffect(() => {
     if (!loading) saveTasks(tasks);
   }, [tasks, loading]);
+
+  // Save recurring series when they change
+  useEffect(() => {
+    if (!loading) saveRecurringSeries(recurringSeries);
+  }, [recurringSeries, loading]);
 
   /**
    * Add a new task with optional notification
@@ -65,6 +88,10 @@ export const TaskProvider = ({ children }) => {
       notificationId: null,
       subtasks: task.subtasks || [],
       description: task.description || '',
+      isRecurring: false,
+      recurringSeriesId: null,
+      instanceDate: null,
+      skipped: false,
       createdAt: now,
       updatedAt: now,
     };
@@ -82,6 +109,189 @@ export const TaskProvider = ({ children }) => {
     setTasks((prev) => [...prev, newTask]);
     return newTask;
   }, [notificationsEnabled]);
+
+  /**
+   * Create a new recurring task series
+   */
+  const createRecurringTask = useCallback(async (taskData, recurringConfig) => {
+    // Validate configuration
+    const validation = validateRecurringConfig(recurringConfig);
+    if (!validation.valid) {
+      console.error('Invalid recurring config:', validation.errors);
+      return null;
+    }
+
+    // Create series and initial instances
+    const { series, instances } = createSeriesUtil(taskData, recurringConfig);
+
+    // Schedule notifications for instances if enabled
+    if (taskData.enableReminder && notificationsEnabled) {
+      for (const instance of instances) {
+        try {
+          const notificationId = await scheduleTaskDueDateNotification(instance);
+          instance.notificationId = notificationId;
+        } catch (error) {
+          console.error('Error scheduling notification:', error);
+        }
+      }
+    }
+
+    // Add series and instances
+    setRecurringSeries((prev) => [...prev, series]);
+    setTasks((prev) => [...prev, ...instances]);
+
+    return { series, instances };
+  }, [notificationsEnabled]);
+
+  /**
+   * Add generated recurring task instances (called by useRecurringGenerator)
+   */
+  const addGeneratedTasks = useCallback((newTasks) => {
+    if (!newTasks || newTasks.length === 0) return;
+    setTasks((prev) => [...prev, ...newTasks]);
+  }, []);
+
+  /**
+   * Get all instances for a recurring series
+   */
+  const getRecurringSeriesInstances = useCallback((seriesId) => {
+    return tasks.filter(t => t.recurringSeriesId === seriesId);
+  }, [tasks]);
+
+  /**
+   * Get a recurring series by ID
+   */
+  const getSeriesById = useCallback((seriesId) => {
+    return recurringSeries.find(s => s.id === seriesId);
+  }, [recurringSeries]);
+
+  /**
+   * Get count of tasks affected by scope
+   */
+  const getAffectedCount = useCallback((seriesId, scope, taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    const fromDate = task?.instanceDate || task?.dueDate;
+    return getAffectedInstanceCount(seriesId, tasks, scope, fromDate);
+  }, [tasks]);
+
+  /**
+   * Update recurring series (all, future, or single instance)
+   */
+  const updateRecurringSeries = useCallback(async (seriesId, updates, scope, taskId) => {
+    const { affected, remaining } = filterTasksByScope(tasks, seriesId, scope, taskId);
+
+    // Cancel notifications for affected tasks
+    for (const task of affected) {
+      if (task.notificationId) {
+        await cancelNotification(task.notificationId);
+      }
+    }
+
+    // Update affected tasks
+    const updatedAffected = affected.map(task => ({
+      ...task,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      notificationId: null,
+    }));
+
+    // Re-schedule notifications if needed
+    if (updates.enableReminder && updates.dueDate && notificationsEnabled) {
+      for (const task of updatedAffected) {
+        try {
+          const notificationId = await scheduleTaskDueDateNotification(task);
+          task.notificationId = notificationId;
+        } catch (error) {
+          console.error('Error scheduling notification:', error);
+        }
+      }
+    }
+
+    // Update series if updating all or future
+    if (scope === 'all' || scope === 'future') {
+      setRecurringSeries((prev) =>
+        prev.map((s) =>
+          s.id === seriesId
+            ? { ...s, ...updates, updatedAt: new Date().toISOString() }
+            : s
+        )
+      );
+    }
+
+    setTasks([...remaining, ...updatedAffected]);
+  }, [tasks, notificationsEnabled]);
+
+  /**
+   * Delete recurring series instances
+   */
+  const deleteRecurringSeries = useCallback(async (seriesId, scope, taskId) => {
+    const { affected, remaining } = filterTasksByScope(tasks, seriesId, scope, taskId);
+
+    // Cancel notifications for affected tasks
+    for (const task of affected) {
+      if (task.notificationId) {
+        await cancelNotification(task.notificationId);
+      }
+    }
+
+    // If deleting all, remove the series
+    if (scope === 'all') {
+      setRecurringSeries((prev) => prev.filter((s) => s.id !== seriesId));
+    } else if (scope === 'future') {
+      // Mark series as inactive if deleting future
+      setRecurringSeries((prev) =>
+        prev.map((s) =>
+          s.id === seriesId ? { ...s, active: false, updatedAt: new Date().toISOString() } : s
+        )
+      );
+    }
+
+    setTasks(remaining);
+  }, [tasks]);
+
+  /**
+   * Skip a recurring instance
+   */
+  const skipRecurringInstance = useCallback(async (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    
+    if (task?.notificationId) {
+      await cancelNotification(task.notificationId);
+    }
+
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, skipped: true, notificationId: null, updatedAt: new Date().toISOString() }
+          : t
+      )
+    );
+  }, [tasks]);
+
+  /**
+   * Unskip a recurring instance
+   */
+  const unskipRecurringInstance = useCallback(async (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    let notificationId = null;
+    if (task.enableReminder && task.dueDate && notificationsEnabled) {
+      try {
+        notificationId = await scheduleTaskDueDateNotification(task);
+      } catch (error) {
+        console.error('Error scheduling notification:', error);
+      }
+    }
+
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, skipped: false, notificationId, updatedAt: new Date().toISOString() }
+          : t
+      )
+    );
+  }, [tasks, notificationsEnabled]);
 
   /**
    * Delete a task and cancel its notification
@@ -175,8 +385,10 @@ export const TaskProvider = ({ children }) => {
       today.setHours(0, 0, 0, 0);
       return dueDate < today;
     }).length;
+    const recurring = tasks.filter((t) => t.isRecurring).length;
+    const skipped = tasks.filter((t) => t.skipped).length;
 
-    return { total, completed, pending, highPriority, overdue };
+    return { total, completed, pending, highPriority, overdue, recurring, skipped };
   }, [tasks]);
 
   /**
@@ -297,11 +509,23 @@ export const TaskProvider = ({ children }) => {
     <TaskContext.Provider
       value={{ 
         tasks, 
+        recurringSeries,
         addTask, 
         deleteTask, 
         toggleCompleted, 
         updateTask,
         getStats,
+        // Recurring task methods
+        createRecurringTask,
+        addGeneratedTasks,
+        getRecurringSeriesInstances,
+        getSeriesById,
+        getAffectedCount,
+        updateRecurringSeries,
+        deleteRecurringSeries,
+        skipRecurringInstance,
+        unskipRecurringInstance,
+        // Subtask methods
         addSubtask,
         toggleSubtask,
         deleteSubtask,

@@ -13,6 +13,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,6 +31,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function TaskCard({ task, onToggle, onDelete, onPress }) {
   const { colors } = useTheme();
+  const router = useRouter();
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const deleteOpacity = useSharedValue(0);
@@ -220,6 +222,36 @@ export default function TaskCard({ task, onToggle, onDelete, onPress }) {
                     </Text>
                   </View>
                 )}
+                
+                {/* Recurring task indicator */}
+                {task.isRecurring && (
+                  <Pressable 
+                    style={[
+                      styles.recurringBadge,
+                      { backgroundColor: colors.accentCyan + '15' },
+                      task.skipped && { backgroundColor: colors.warning + '15' }
+                    ]}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      if (task.recurringSeriesId) {
+                        router.push(`/recurring-series?seriesId=${task.recurringSeriesId}`);
+                      }
+                    }}
+                  >
+                    <Ionicons 
+                      name={task.skipped ? "play-skip-forward" : "repeat"} 
+                      size={12} 
+                      color={task.skipped ? colors.warning : colors.accentCyan} 
+                    />
+                    <Text style={[
+                      styles.recurringText, 
+                      { color: colors.accentCyan },
+                      task.skipped && { color: colors.warning }
+                    ]}>
+                      {task.skipped ? 'Saltada' : 'Recurrente'}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             </View>
             
@@ -364,6 +396,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  
+  recurringBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.full,
+  },
+  
+  recurringText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
   },
 });
 

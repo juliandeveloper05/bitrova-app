@@ -30,6 +30,7 @@ import DraggableSubtaskList from '../components/DraggableSubtaskList';
 import DiscardChangesModal from '../components/DiscardChangesModal';
 import SaveIndicator, { SAVE_STATES } from '../components/SaveIndicator';
 import TaskDescriptionEditor from '../components/TaskDescriptionEditor';
+import RecurringActionModal from '../components/RecurringActionModal';
 import { formatRelativeTime } from '../utils/dateHelpers';
 import { useHistory, useUndoRedoKeyboard } from '../hooks/useHistory';
 
@@ -50,7 +51,23 @@ const safeHaptics = {
 export default function TaskDetails() {
   const router = useRouter();
   const { taskId } = useLocalSearchParams();
-  const { tasks, updateTask, deleteTask, toggleCompleted, addSubtask, toggleSubtask, deleteSubtask, updateSubtask, reorderSubtasks } = useContext(TaskContext);
+  const { 
+    tasks, 
+    updateTask, 
+    deleteTask, 
+    toggleCompleted, 
+    addSubtask, 
+    toggleSubtask, 
+    deleteSubtask, 
+    updateSubtask, 
+    reorderSubtasks,
+    // Recurring task methods
+    deleteRecurringSeries,
+    updateRecurringSeries,
+    getAffectedCount,
+    skipRecurringInstance,
+    unskipRecurringInstance,
+  } = useContext(TaskContext);
   const { colors } = useTheme();
   
   // Find the task
@@ -74,6 +91,11 @@ export default function TaskDetails() {
   const isTitleValid = title.trim().length > 0;
   const canSave = hasChanges && isTitleValid && saveState !== SAVE_STATES.SAVING;
   const [newSubtaskText, setNewSubtaskText] = useState('');
+  
+  // Recurring task action modal state
+  const [showRecurringModal, setShowRecurringModal] = useState(false);
+  const [recurringAction, setRecurringAction] = useState('delete'); // 'delete' or 'edit'
+  const [recurringCounts, setRecurringCounts] = useState({ this: 1, future: 1, all: 1 });
   
   // History for undo/redo
   const history = useHistory({ title: '', description: '', category: 'personal', priority: 'medium' });
@@ -226,6 +248,20 @@ export default function TaskDetails() {
   };
 
   const handleDelete = () => {
+    // Check if this is a recurring task
+    if (task.isRecurring && task.recurringSeriesId) {
+      // Show recurring action modal
+      const counts = {
+        this: 1,
+        future: getAffectedCount(task.recurringSeriesId, 'future', taskId),
+        all: getAffectedCount(task.recurringSeriesId, 'all', taskId),
+      };
+      setRecurringCounts(counts);
+      setRecurringAction('delete');
+      setShowRecurringModal(true);
+      return;
+    }
+
     const performDelete = () => {
       deleteTask(taskId);
       safeHaptics.notification(Haptics.NotificationFeedbackType.Success);
@@ -246,6 +282,27 @@ export default function TaskDetails() {
         ]
       );
     }
+  };
+
+  // Handle recurring action modal confirm
+  const handleRecurringConfirm = async (scope) => {
+    setShowRecurringModal(false);
+    
+    if (recurringAction === 'delete') {
+      await deleteRecurringSeries(task.recurringSeriesId, scope, taskId);
+      safeHaptics.notification(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    }
+  };
+
+  // Handle skip/unskip recurring instance
+  const handleSkipInstance = async () => {
+    if (task.skipped) {
+      await unskipRecurringInstance(taskId);
+    } else {
+      await skipRecurringInstance(taskId);
+    }
+    safeHaptics.notification(Haptics.NotificationFeedbackType.Success);
   };
 
   const handleToggleComplete = () => {
@@ -348,38 +405,104 @@ export default function TaskDetails() {
             style={[
               styles.statusCard,
               { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder },
-              task.completed && { backgroundColor: colors.success + '10', borderColor: colors.success + '30' }
+              task.completed && { backgroundColor: colors.success + '10', borderColor: colors.success + '30' },
+              task.skipped && { backgroundColor: colors.warning + '10', borderColor: colors.warning + '30' }
             ]}
             onPress={handleToggleComplete}
           >
             <View style={[
               styles.checkCircle,
               { borderColor: colors.textTertiary },
-              task.completed && { backgroundColor: colors.success, borderColor: colors.success }
+              task.completed && { backgroundColor: colors.success, borderColor: colors.success },
+              task.skipped && { backgroundColor: colors.warning, borderColor: colors.warning }
             ]}>
               {task.completed && (
                 <Ionicons name="checkmark" size={20} color={colors.white} />
+              )}
+              {task.skipped && (
+                <Ionicons name="play-skip-forward" size={16} color={colors.white} />
               )}
             </View>
             <Text style={[
               styles.statusText,
               { color: colors.textPrimary },
-              task.completed && { color: colors.success }
+              task.completed && { color: colors.success },
+              task.skipped && { color: colors.warning }
             ]}>
-              {task.completed ? 'Completada' : 'Pendiente'}
+              {task.skipped ? 'Saltada' : task.completed ? 'Completada' : 'Pendiente'}
             </Text>
             <View style={[
               styles.statusBadge,
-              { backgroundColor: task.completed ? colors.success + '20' : priority.color + '20' }
+              { backgroundColor: task.skipped ? colors.warning + '20' : task.completed ? colors.success + '20' : priority.color + '20' }
             ]}>
               <Ionicons 
-                name={task.completed ? 'checkmark-circle' : priority.icon} 
+                name={task.skipped ? 'play-skip-forward' : task.completed ? 'checkmark-circle' : priority.icon} 
                 size={16} 
-                color={task.completed ? colors.success : priority.color} 
+                color={task.skipped ? colors.warning : task.completed ? colors.success : priority.color} 
               />
             </View>
           </Pressable>
         </Animated.View>
+
+        {/* Recurring Task Info & Actions */}
+        {task.isRecurring && (
+          <Animated.View
+            style={styles.section}
+            entering={FadeInUp.delay(75).springify()}
+          >
+            <View style={[styles.recurringInfoCard, { backgroundColor: colors.accentCyan + '10', borderColor: colors.accentCyan + '30' }]}>
+              <View style={styles.recurringInfoHeader}>
+                <View style={[styles.recurringIconContainer, { backgroundColor: colors.accentCyan + '20' }]}>
+                  <Ionicons name="repeat" size={20} color={colors.accentCyan} />
+                </View>
+                <View style={styles.recurringInfoText}>
+                  <Text style={[styles.recurringInfoTitle, { color: colors.textPrimary }]}>
+                    Tarea Recurrente
+                  </Text>
+                  <Text style={[styles.recurringInfoSubtitle, { color: colors.textSecondary }]}>
+                    Parte de una serie recurrente
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.recurringActions}>
+                {/* Skip/Unskip Button */}
+                {!task.completed && (
+                  <Pressable
+                    style={[
+                      styles.recurringActionButton,
+                      { backgroundColor: task.skipped ? colors.success + '15' : colors.warning + '15' }
+                    ]}
+                    onPress={handleSkipInstance}
+                  >
+                    <Ionicons 
+                      name={task.skipped ? "play" : "play-skip-forward"} 
+                      size={16} 
+                      color={task.skipped ? colors.success : colors.warning} 
+                    />
+                    <Text style={[
+                      styles.recurringActionText,
+                      { color: task.skipped ? colors.success : colors.warning }
+                    ]}>
+                      {task.skipped ? 'Reactivar' : 'Saltar esta vez'}
+                    </Text>
+                  </Pressable>
+                )}
+                
+                {/* View Series Button */}
+                <Pressable
+                  style={[styles.recurringActionButton, { backgroundColor: colors.accentCyan + '15' }]}
+                  onPress={() => router.push(`/recurring-series?seriesId=${task.recurringSeriesId}`)}
+                >
+                  <Ionicons name="layers-outline" size={16} color={colors.accentCyan} />
+                  <Text style={[styles.recurringActionText, { color: colors.accentCyan }]}>
+                    Ver serie completa
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </Animated.View>
+        )}
 
         {/* Task Title Input */}
         <Animated.View 
@@ -694,6 +817,15 @@ export default function TaskDetails() {
         onDiscard={handleModalDiscard}
         onCancel={handleModalCancel}
         isSaving={saveState === SAVE_STATES.SAVING}
+      />
+
+      {/* Recurring Action Modal */}
+      <RecurringActionModal
+        visible={showRecurringModal}
+        onClose={() => setShowRecurringModal(false)}
+        onConfirm={handleRecurringConfirm}
+        action={recurringAction}
+        counts={recurringCounts}
       />
     </View>
   );
@@ -1013,5 +1145,61 @@ const styles = StyleSheet.create({
   saveIndicatorContainer: {
     alignItems: 'center',
     marginBottom: spacing.md,
+  },
+  
+  // Recurring task info card styles
+  recurringInfoCard: {
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    padding: spacing.lg,
+  },
+  
+  recurringInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  
+  recurringIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  recurringInfoText: {
+    flex: 1,
+  },
+  
+  recurringInfoTitle: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: 2,
+  },
+  
+  recurringInfoSubtitle: {
+    fontSize: typography.fontSize.sm,
+  },
+  
+  recurringActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  
+  recurringActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+  },
+  
+  recurringActionText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
   },
 });

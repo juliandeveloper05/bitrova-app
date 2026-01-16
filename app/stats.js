@@ -3,7 +3,7 @@
  * Task List App 2026
  */
 
-import React, { useState } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import WeeklyChart from '../components/WeeklyChart';
 import StatsSummaryCard from '../components/StatsSummaryCard';
 import { useStats } from '../context/StatsContext';
+import { TaskContext } from '../context/TaskContext';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, borderRadius, typography } from '../constants/theme';
 
@@ -29,11 +30,31 @@ export default function StatsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { getWeeklyStats, getMonthlyStats, getTodayStats } = useStats();
+  const { tasks, recurringSeries } = useContext(TaskContext);
   const [chartMetric, setChartMetric] = useState('tasksCompleted');
   
   const weeklyStats = getWeeklyStats();
   const monthlyStats = getMonthlyStats();
   const todayStats = getTodayStats();
+
+  // Calculate recurring tasks statistics
+  const recurringStats = useMemo(() => {
+    const recurringTasks = tasks.filter(t => t.isRecurring);
+    const completed = recurringTasks.filter(t => t.completed).length;
+    const skipped = recurringTasks.filter(t => t.skipped).length;
+    const pending = recurringTasks.filter(t => !t.completed && !t.skipped).length;
+    const total = recurringTasks.length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    return {
+      seriesCount: recurringSeries.length,
+      totalInstances: total,
+      completed,
+      pending,
+      skipped,
+      completionRate,
+    };
+  }, [tasks, recurringSeries]);
 
   const chartMetrics = [
     { key: 'tasksCompleted', label: 'Tareas', icon: 'checkmark-circle', color: colors.success },
@@ -246,6 +267,73 @@ export default function StatsScreen() {
           </Animated.View>
         </Animated.View>
 
+        {/* Recurring Tasks Stats */}
+        {recurringStats.seriesCount > 0 && (
+          <Animated.View 
+            style={styles.section}
+            entering={FadeInUp.delay(500).springify()}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+              TAREAS RECURRENTES
+            </Text>
+            
+            <View style={[styles.recurringCard, { backgroundColor: colors.accentCyan + '10', borderColor: colors.accentCyan + '30' }]}>
+              <View style={styles.recurringHeader}>
+                <View style={[styles.recurringIconContainer, { backgroundColor: colors.accentCyan + '20' }]}>
+                  <Ionicons name="repeat" size={24} color={colors.accentCyan} />
+                </View>
+                <View style={styles.recurringHeaderText}>
+                  <Text style={[styles.recurringSeriesCount, { color: colors.textPrimary }]}>
+                    {recurringStats.seriesCount} serie{recurringStats.seriesCount !== 1 ? 's' : ''}
+                  </Text>
+                  <Text style={[styles.recurringInstanceCount, { color: colors.textSecondary }]}>
+                    {recurringStats.totalInstances} instancias totales
+                  </Text>
+                </View>
+                <View style={styles.completionCircle}>
+                  <Text style={[styles.completionPercentage, { color: colors.accentCyan }]}>
+                    {recurringStats.completionRate}%
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={[styles.recurringBreakdown]}>
+                <View style={[styles.breakdownItem, { backgroundColor: colors.success + '15' }]}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <Text style={[styles.breakdownValue, { color: colors.success }]}>
+                    {recurringStats.completed}
+                  </Text>
+                  <Text style={[styles.breakdownLabel, { color: colors.textTertiary }]}>
+                    completadas
+                  </Text>
+                </View>
+                
+                <View style={[styles.breakdownItem, { backgroundColor: colors.warning + '15' }]}>
+                  <Ionicons name="time-outline" size={16} color={colors.warning} />
+                  <Text style={[styles.breakdownValue, { color: colors.warning }]}>
+                    {recurringStats.pending}
+                  </Text>
+                  <Text style={[styles.breakdownLabel, { color: colors.textTertiary }]}>
+                    pendientes
+                  </Text>
+                </View>
+                
+                {recurringStats.skipped > 0 && (
+                  <View style={[styles.breakdownItem, { backgroundColor: colors.textTertiary + '15' }]}>
+                    <Ionicons name="play-skip-forward" size={16} color={colors.textTertiary} />
+                    <Text style={[styles.breakdownValue, { color: colors.textSecondary }]}>
+                      {recurringStats.skipped}
+                    </Text>
+                    <Text style={[styles.breakdownLabel, { color: colors.textTertiary }]}>
+                      saltadas
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Spacer */}
         <View style={{ height: spacing.xxxl }} />
       </ScrollView>
@@ -453,5 +541,77 @@ const styles = StyleSheet.create({
   streakBestValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
+  },
+
+  // Recurring stats styles
+  recurringCard: {
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    padding: spacing.lg,
+  },
+
+  recurringHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+
+  recurringIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  recurringHeaderText: {
+    flex: 1,
+  },
+
+  recurringSeriesCount: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+  },
+
+  recurringInstanceCount: {
+    fontSize: typography.fontSize.sm,
+    marginTop: 2,
+  },
+
+  completionCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  completionPercentage: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+  },
+
+  recurringBreakdown: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+
+  breakdownItem: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: 4,
+  },
+
+  breakdownValue: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+  },
+
+  breakdownLabel: {
+    fontSize: typography.fontSize.xs,
   },
 });

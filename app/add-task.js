@@ -26,6 +26,8 @@ import { spacing, borderRadius, typography, categories, priorities } from '../co
 import GradientButton from '../components/GradientButton';
 import DatePickerButton from '../components/DatePickerButton';
 import ReminderToggle from '../components/ReminderToggle';
+import RecurrenceSelector from '../components/RecurrenceSelector';
+import { DEFAULT_RECURRING_CONFIG } from '../utils/recurringHelpers';
 
 // Safe haptics wrapper for web compatibility
 const safeHaptics = {
@@ -43,7 +45,7 @@ const safeHaptics = {
 
 export default function AddTask() {
   const router = useRouter();
-  const { addTask } = useContext(TaskContext);
+  const { addTask, createRecurringTask } = useContext(TaskContext);
   const { colors } = useTheme();
   
   const [title, setTitle] = useState('');
@@ -51,22 +53,42 @@ export default function AddTask() {
   const [selectedPriority, setSelectedPriority] = useState('medium');
   const [dueDate, setDueDate] = useState(null);
   const [enableReminder, setEnableReminder] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringConfig, setRecurringConfig] = useState({
+    ...DEFAULT_RECURRING_CONFIG,
+    startDate: new Date().toISOString(),
+  });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) {
       safeHaptics.notification(Haptics.NotificationFeedbackType.Error);
       return;
     }
-    
-    addTask({
+
+    const taskData = {
       title: title.trim(),
       category: selectedCategory,
       priority: selectedPriority,
-      dueDate: dueDate ? dueDate.toISOString() : null,
-      enableReminder: enableReminder && dueDate !== null,
-      completed: false,
-      createdAt: new Date().toISOString(),
-    });
+      enableReminder: enableReminder,
+    };
+
+    if (isRecurring) {
+      // Validate recurring config has start date
+      if (!recurringConfig.startDate) {
+        safeHaptics.notification(Haptics.NotificationFeedbackType.Error);
+        return;
+      }
+      // Create recurring task series
+      await createRecurringTask(taskData, recurringConfig);
+    } else {
+      // Create regular task
+      await addTask({
+        ...taskData,
+        dueDate: dueDate ? dueDate.toISOString() : null,
+        completed: false,
+        createdAt: new Date().toISOString(),
+      });
+    }
     
     safeHaptics.notification(Haptics.NotificationFeedbackType.Success);
     router.back();
@@ -194,6 +216,57 @@ export default function AddTask() {
                 enabled={enableReminder}
                 onToggle={setEnableReminder}
                 label="Recordarme a las 9:00 AM"
+              />
+            </Animated.View>
+          )}
+        </Animated.View>
+
+        {/* Recurrence Section */}
+        <Animated.View 
+          style={styles.section}
+          entering={FadeInUp.delay(325).springify()}
+        >
+          <Pressable
+            style={styles.recurrenceToggle}
+            onPress={() => {
+              setIsRecurring(!isRecurring);
+              safeHaptics.impact(Haptics.ImpactFeedbackStyle.Light);
+            }}
+          >
+            <View style={[
+              styles.toggleCircle,
+              { 
+                backgroundColor: isRecurring ? colors.accentCyan : 'transparent',
+                borderColor: isRecurring ? colors.accentCyan : colors.glassBorder,
+              }
+            ]}>
+              {isRecurring && (
+                <Ionicons name="checkmark" size={14} color={colors.bgPrimary} />
+              )}
+            </View>
+            <View style={styles.toggleContent}>
+              <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>
+                Hacer esta tarea recurrente
+              </Text>
+              <Text style={[styles.toggleDescription, { color: colors.textTertiary }]}>
+                Se repetirá automáticamente según el patrón
+              </Text>
+            </View>
+            <Ionicons 
+              name="repeat" 
+              size={20} 
+              color={isRecurring ? colors.accentCyan : colors.textTertiary} 
+            />
+          </Pressable>
+
+          {isRecurring && (
+            <Animated.View
+              style={[styles.recurrenceContainer, { backgroundColor: colors.glassLight }]}
+              entering={FadeInUp.duration(200)}
+            >
+              <RecurrenceSelector
+                config={recurringConfig}
+                onChange={setRecurringConfig}
               />
             </Animated.View>
           )}
@@ -399,5 +472,41 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
+  },
+  
+  recurrenceToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  
+  toggleCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  toggleContent: {
+    flex: 1,
+  },
+  
+  toggleLabel: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.medium,
+  },
+  
+  toggleDescription: {
+    fontSize: typography.fontSize.sm,
+    marginTop: 2,
+  },
+  
+  recurrenceContainer: {
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
   },
 });
