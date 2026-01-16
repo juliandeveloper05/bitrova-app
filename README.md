@@ -1,6 +1,6 @@
 # 📋 Task List App
 
-> **Version 2.1** - Task Editing Improvements Update
+> **Version 2.2** - Recurring Tasks Update
 
 A modern, feature-rich task management application built with React Native and Expo. Designed with premium glassmorphism aesthetics and a focus on user experience.
 
@@ -23,7 +23,18 @@ A modern, feature-rich task management application built with React Native and E
 - **Quick Actions** - Swipe-to-delete gesture for efficient task removal
 - **Completion Tracking** - Toggle tasks with animated checkboxes
 
-### ✏️ Advanced Editing (NEW!)
+### 🔄 Recurring Tasks (NEW!)
+- **Flexible Patterns** - Daily, Weekly, Monthly, or Custom recurrence
+- **Day Selection** - Choose specific days of the week for weekly tasks
+- **Frequency Control** - Set "every X days/weeks/months"
+- **Series Management** - View and manage all instances of a recurring series
+- **Scoped Actions** - Edit/delete single instance, future, or entire series
+- **Skip Instances** - Skip individual occurrences without deleting
+- **Auto-Generation** - Instances generated automatically for next 30 days
+- **Smart Notifications** - Automatic notification scheduling per instance
+- **Statistics** - Completion rate and breakdown in stats screen
+
+### ✏️ Advanced Editing
 - **Unsaved Changes Protection** - Modal confirmation when navigating away
 - **Field Validation** - Real-time title validation with error feedback
 - **Save State Indicator** - Visual feedback (saving, success, error)
@@ -54,6 +65,7 @@ A modern, feature-rich task management application built with React Native and E
 - **Progress Tracking** - Visual completion rate with circular indicator
 - **Task Analytics** - Overview of completed, pending, and urgent tasks
 - **Category Insights** - Task distribution across categories
+- **Recurring Stats** - Series count, completion rate, and instance breakdown
 
 ## 🛠️ Tech Stack
 
@@ -140,8 +152,11 @@ tasklist-app/
 - [x] Task editing improvements
 - [x] Subtasks support
 
-### 🔄 Phase 2: Enhanced Features (In Progress)
-- [ ] Recurring tasks
+### ✅ Phase 2: Enhanced Features (Complete)
+- [x] Recurring tasks with patterns (daily, weekly, monthly, custom)
+- [x] Series management (view, edit, delete with scope)
+- [x] Skip/unskip instances
+- [x] Recurring task statistics
 - [ ] Attachments (images, files)
 - [ ] Task sharing
 - [ ] Export/Import data (JSON, CSV)
