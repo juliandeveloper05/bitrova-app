@@ -1,20 +1,39 @@
-# 📋 Task List App
+# 📋 Bitrova
 
-> **Version 2.2** - Recurring Tasks Update
+> **Version 2.3** - Authentication & Cloud Sync Update
 
 A modern, feature-rich task management application built with React Native and Expo. Designed with premium glassmorphism aesthetics and a focus on user experience.
 
 ![Status](https://img.shields.io/badge/status-active-success)
 ![React Native](https://img.shields.io/badge/React%20Native-0.76.6-blue)
 ![Expo](https://img.shields.io/badge/Expo-~52.0-000020?logo=expo)
+![Supabase](https://img.shields.io/badge/Supabase-Auth%20%26%20Sync-3ECF8E?logo=supabase)
 
 ## ✨ Key Features
 
+### 🔐 Authentication (NEW!)
+- **Supabase Integration** - Secure authentication with email/password
+- **User Registration** - Create new accounts with email validation
+- **Login System** - Secure sign-in with session management
+- **Forgot Password** - Email-based password reset functionality
+- **AuthContext** - Global authentication state management
+- **Protected Routes** - Secure access to app features
+
+### ☁️ Cloud Backup & Sync (NEW!)
+- **Real-time Sync** - Automatic synchronization across devices
+- **Cloud Backup** - Manual and automatic backup options
+- **Sync Status Indicators** - Visual feedback for sync state
+- **Offline Support** - Local storage with sync when online
+- **Data Recovery** - Restore tasks from cloud backups
+
 ### 🎨 Design & UI
 - **Glassmorphism Design** - Modern frosted glass aesthetic with blur effects
+- **GlassCard Component** - Reusable glassmorphism container
 - **Dark/Light Theme** - Seamless theme switching with persistent preference
 - **Smooth Animations** - Powered by React Native Reanimated for 60fps interactions
 - **Responsive Layout** - Optimized for iOS, Android, and Web platforms
+- **Custom Font Sizes** - Adjustable text size (Small/Medium/Large) for tasks
+- **InputField Component** - Reusable input with validation states
 
 ### 📝 Task Management
 - **Smart Categories** - Organize tasks by Work, Personal, Shopping, Health
@@ -23,7 +42,13 @@ A modern, feature-rich task management application built with React Native and E
 - **Quick Actions** - Swipe-to-delete gesture for efficient task removal
 - **Completion Tracking** - Toggle tasks with animated checkboxes
 
-### 🔄 Recurring Tasks (NEW!)
+### 📎 Attachments
+- **Image Attachments** - Add photos to tasks
+- **Attachment Picker** - Improved UI with visible controls
+- **Attachment Gallery** - View all task attachments
+- **Attachment Viewer** - Full-screen attachment preview
+
+### 🔄 Recurring Tasks
 - **Flexible Patterns** - Daily, Weekly, Monthly, or Custom recurrence
 - **Day Selection** - Choose specific days of the week for weekly tasks
 - **Frequency Control** - Set "every X days/weeks/months"
@@ -75,6 +100,7 @@ A modern, feature-rich task management application built with React Native and E
 | Expo (v52) | Development toolchain |
 | Expo Router | File-based navigation |
 | React Context | State management |
+| Supabase | Authentication & cloud sync |
 | Reanimated 3 | Animations |
 | Gesture Handler | Touch gestures |
 | AsyncStorage | Persistent storage |
@@ -115,27 +141,42 @@ npx expo start --web
 tasklist-app/
 ├── app/                      # Expo Router screens
 │   ├── index.js             # Home screen
+│   ├── auth.js              # Authentication screen (login/register)
 │   ├── add-task.js          # Add task modal
 │   ├── task-details.js      # Task details & editing
+│   ├── cloud-backup.js      # Cloud backup management
 │   └── settings.js          # App settings
 ├── components/              # Reusable components
 │   ├── TaskCard.js          # Task item card
+│   ├── GlassCard.js         # Glassmorphism container
+│   ├── InputField.js        # Input with validation
+│   ├── AttachmentPicker.js  # File attachment picker
+│   ├── AttachmentGallery.js # Attachment grid view
 │   ├── SubtaskItem.js       # Subtask with inline edit
 │   ├── DraggableSubtaskList.js # Drag & drop subtasks
 │   ├── DiscardChangesModal.js  # Unsaved changes modal
 │   ├── SaveIndicator.js     # Save state feedback
-│   ├── TaskDescriptionEditor.js # Notes editor
 │   └── ...
 ├── context/                 # React Context providers
 │   ├── TaskContext.js       # Task state & methods
-│   └── ThemeContext.js      # Theme management
+│   ├── ThemeContext.js      # Theme management
+│   └── AuthContext.js       # Authentication state
+├── config/                  # Configuration
+│   └── supabase.js          # Supabase client setup
+├── services/                # Business logic services
+│   ├── cloudSyncService.js  # Real-time sync
+│   ├── backupService.js     # Backup operations
+│   └── exportService.js     # Data export
 ├── hooks/                   # Custom hooks
 │   ├── useAutoSave.js       # Debounced auto-save
-│   └── useHistory.js        # Undo/redo stack
+│   ├── useHistory.js        # Undo/redo stack
+│   └── useCloudSync.js      # Cloud sync hook
 ├── utils/                   # Utilities
 │   ├── storage.js           # AsyncStorage helpers
 │   ├── notifications.js     # Notification service
 │   └── dateHelpers.js       # Date formatting
+├── theme/                   # Theme configuration
+│   └── colors.js            # Color palette
 └── constants/               # Configuration
     └── theme.js             # Design tokens
 ```
@@ -157,10 +198,13 @@ tasklist-app/
 - [x] Series management (view, edit, delete with scope)
 - [x] Skip/unskip instances
 - [x] Recurring task statistics
-- [ ] Attachments (images, files)
-- [ ] Task sharing
+- [x] Authentication system (Supabase)
+- [x] Cloud backup & sync
+- [x] Attachments (images)
+- [x] Custom font size settings
+- [x] GlassCard & InputField components
 - [ ] Export/Import data (JSON, CSV)
-- [ ] Cloud backup integration
+- [ ] Task sharing
 
 ### 📋 Phase 3: Advanced Features (Planned)
 - [ ] Collaboration features
