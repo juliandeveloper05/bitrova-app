@@ -172,7 +172,14 @@ Transitioning from single-user B2C to Team-based B2B architecture.
 This project is open source and available under the MIT License.
 
 ## 👨‍💻 Author
-Julian Javier Soto
+**Julian Javier Soto**
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/full-stack-julian-soto/)
+[![Instagram](https://img.shields.io/badge/Instagram-E4405F?style=flat&logo=instagram&logoColor=white)](https://www.instagram.com/palee_0x71/?hl=es-la)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/juliandeveloper05)
+[![Portfolio](https://img.shields.io/badge/Portfolio-4285F4?style=flat&logo=google-chrome&logoColor=white)](https://juliansoto-portfolio.vercel.app/es)
+[![Email](https://img.shields.io/badge/Email-EA4335?style=flat&logo=gmail&logoColor=white)](mailto:juliansoto.dev@gmail.com)
+[![WhatsApp](https://img.shields.io/badge/WhatsApp-25D366?style=flat&logo=whatsapp&logoColor=white)](https://wa.me/5491130666369)
 
 ---
 
