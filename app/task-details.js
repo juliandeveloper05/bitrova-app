@@ -37,6 +37,7 @@ import AttachmentViewer from '../components/AttachmentViewer';
 import { useFilePicker } from '../hooks/useFilePicker';
 import { formatRelativeTime } from '../utils/dateHelpers';
 import { useHistory, useUndoRedoKeyboard } from '../hooks/useHistory';
+import { CommentsSection } from '../components/comments';
 
 // Safe haptics wrapper for web compatibility
 const safeHaptics = {
@@ -714,6 +715,14 @@ export default function TaskDetails() {
             onAddPress={handleAddAttachment}
             editable={!task.completed}
           />
+        </Animated.View>
+
+        {/* Comments Section */}
+        <Animated.View 
+          style={styles.section}
+          entering={FadeInUp.delay(195).springify()}
+        >
+          <CommentsSection taskId={taskId} collapsed={true} />
         </Animated.View>
 
         {/* Category Selection */}
