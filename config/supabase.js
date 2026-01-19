@@ -9,9 +9,9 @@ import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Supabase credentials
-const SUPABASE_URL = 'https://jkimztqwazimoutkgcos.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_AaeV0UFV722HjJKoEGUZSQ_8zFuSx0u';
+// Supabase credentials from environment variables
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
@@ -23,6 +23,9 @@ export const isSupabaseConfigured = () => {
 const customStorage = {
   getItem: async (key) => {
     try {
+      if (Platform.OS === 'web') {
+        return localStorage.getItem(key);
+      }
       const value = await AsyncStorage.getItem(key);
       return value;
     } catch (error) {
@@ -32,6 +35,10 @@ const customStorage = {
   },
   setItem: async (key, value) => {
     try {
+      if (Platform.OS === 'web') {
+        localStorage.setItem(key, value);
+        return;
+      }
       await AsyncStorage.setItem(key, value);
     } catch (error) {
       console.error('Error setting item in storage:', error);
@@ -39,6 +46,10 @@ const customStorage = {
   },
   removeItem: async (key) => {
     try {
+      if (Platform.OS === 'web') {
+        localStorage.removeItem(key);
+        return;
+      }
       await AsyncStorage.removeItem(key);
     } catch (error) {
       console.error('Error removing item from storage:', error);
@@ -46,13 +57,17 @@ const customStorage = {
   },
 };
 
-// Create Supabase client
+// Create Supabase client with proper web configuration
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: customStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
+    flowType: 'pkce', // Important for web security
+    ...(Platform.OS === 'web' && {
+      redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+    }),
   },
 });
 
@@ -62,6 +77,18 @@ export const TABLES = {
   TASKS: 'tasks',
   BACKUPS: 'backups',
   SYNC_QUEUE: 'sync_queue',
+  // Phase 3 B2B tables
+  ORGANIZATIONS: 'organizations',
+  TEAMS: 'teams',
+  MEMBERS: 'members',
+  TEAM_MEMBERS: 'team_members',
+  WORKSPACES: 'workspaces',
+  WORKSPACE_MEMBERS: 'workspace_members',
+  KANBAN_COLUMNS: 'kanban_columns',
+  INVITATIONS: 'invitations',
+  COMMENTS: 'comments',
+  ACTIVITIES: 'activities',
+  NOTIFICATIONS: 'notifications',
 };
 
 // Storage bucket names
@@ -102,7 +129,12 @@ export const getSetupInstructions = () => {
    - SUPABASE_URL = 'your-project-url'
    - SUPABASE_ANON_KEY = 'your-anon-key'
 
-5. Run the following SQL in Supabase SQL Editor to create tables:
+5. In Supabase Dashboard, go to Authentication > URL Configuration
+   Add your web app URL to "Redirect URLs":
+   - For development: http://localhost:19006
+   - For production: your-domain.com
+
+6. Run the following SQL in Supabase SQL Editor to create tables:
 
 -- Profiles table
 CREATE TABLE profiles (
@@ -197,5 +229,20 @@ CREATE TRIGGER on_auth_user_created
   EXECUTE FUNCTION handle_new_user();
 `;
 };
+
+/**
+ * Initialize auth state listener for web
+ */
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  // Handle OAuth redirects
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN') {
+      console.log('User signed in:', session?.user?.email);
+    }
+    if (event === 'SIGNED_OUT') {
+      console.log('User signed out');
+    }
+  });
+}
 
 export default supabase;

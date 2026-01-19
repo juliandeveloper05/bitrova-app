@@ -23,6 +23,15 @@ import { validateRecurringConfig } from "../utils/recurringHelpers";
 
 export const TaskContext = createContext();
 
+// Hook for easy access to TaskContext
+export const useTasks = () => {
+  const context = useContext(TaskContext);
+  if (!context) {
+    throw new Error('useTasks must be used within a TaskProvider');
+  }
+  return context;
+};
+
 export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const [recurringSeries, setRecurringSeries] = useState([]);

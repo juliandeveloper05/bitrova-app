@@ -5,6 +5,9 @@ import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import { PomodoroProvider } from "../context/PomodoroContext";
 import { StatsProvider } from "../context/StatsContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
+import { SubscriptionProvider } from "../context/SubscriptionContext";
+import { OrganizationProvider } from "../context/OrganizationContext";
+import { WorkspaceProvider } from "../context/WorkspaceContext";
 import { StatusBar } from "expo-status-bar";
 import AuthScreen from "./auth";
 
@@ -82,6 +85,12 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen 
+          name="analytics" 
+          options={{
+            animation: "slide_from_right",
+          }}
+        />
+        <Stack.Screen 
           name="data-management" 
           options={{
             animation: "slide_from_right",
@@ -99,23 +108,49 @@ function RootLayoutNav() {
             animation: "fade",
           }}
         />
+        {/* B2B Screens */}
+        <Stack.Screen 
+          name="kanban" 
+          options={{
+            animation: "slide_from_right",
+          }}
+        />
+        <Stack.Screen 
+          name="organization-settings" 
+          options={{
+            animation: "slide_from_right",
+          }}
+        />
+        <Stack.Screen 
+          name="invite" 
+          options={{
+            animation: "fade",
+          }}
+        />
       </Stack>
     </>
   );
 }
 
 // Main layout that provides all contexts
+// Provider order: Theme → Auth → Subscription → Organization → Workspace → Stats → Pomodoro → Task
 export default function Layout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <StatsProvider>
-          <PomodoroProvider>
-            <TaskProvider>
-              <RootLayoutNav />
-            </TaskProvider>
-          </PomodoroProvider>
-        </StatsProvider>
+        <SubscriptionProvider>
+          <OrganizationProvider>
+            <WorkspaceProvider>
+              <StatsProvider>
+                <PomodoroProvider>
+                  <TaskProvider>
+                    <RootLayoutNav />
+                  </TaskProvider>
+                </PomodoroProvider>
+              </StatsProvider>
+            </WorkspaceProvider>
+          </OrganizationProvider>
+        </SubscriptionProvider>
       </AuthProvider>
     </ThemeProvider>
   );

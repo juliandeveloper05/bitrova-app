@@ -46,6 +46,15 @@ export default function Header() {
       </View>
       
       <View style={styles.buttonsContainer}>
+        {/* Kanban Board Button */}
+        <TouchableOpacity 
+          style={[styles.headerButton, { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder }]}
+          onPress={() => router.push('/kanban')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="grid" size={22} color={colors.accentBlue} />
+        </TouchableOpacity>
+
         {/* Stats Button */}
         <TouchableOpacity 
           style={[styles.headerButton, { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder }]}
