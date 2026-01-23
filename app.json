@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.jsoto11.bitrova",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#050511"
@@ -32,10 +33,21 @@
           "resizeMode": "contain",
           "backgroundColor": "#050511"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "12452a28-c5cf-40ab-89f0-cd1a7762c089"
+      }
+    },
+    "owner": "jsoto11"
   }
 }

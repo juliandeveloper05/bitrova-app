@@ -6,10 +6,88 @@
  */
 
 import { supabase, TABLES } from '../config/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Regex to find @mentions in text
 const MENTION_REGEX = /@\[([^\]]+)\]\(([^)]+)\)/g;
 const SIMPLE_MENTION_REGEX = /@(\w+)/g;
+
+// Storage key for tasks (same as used in storage.js)
+const TASKS_STORAGE_KEY = '@tasklist_tasks';
+
+/**
+ * Ensure task exists in Supabase before creating a comment
+ * This prevents foreign key constraint violations
+ */
+async function ensureTaskExistsInCloud(taskId, organizationId, workspaceId, userId) {
+  // Check if task already exists in cloud
+  const { data: existingTask, error: checkError } = await supabase
+    .from(TABLES.TASKS)
+    .select('id')
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (existingTask) {
+    // Task exists, nothing to do
+    return true;
+  }
+
+  // Task doesn't exist - try to load from local storage and sync
+  try {
+    const tasksJson = await AsyncStorage.getItem(TASKS_STORAGE_KEY);
+    const localTasks = tasksJson ? JSON.parse(tasksJson) : [];
+    const localTask = localTasks.find(t => t.id === taskId);
+
+    if (localTask) {
+      // Convert local task to cloud format and upsert
+      const cloudTask = {
+        id: localTask.id,
+        user_id: userId,
+        title: localTask.title,
+        description: localTask.description || null,
+        category: localTask.category || 'personal',
+        priority: localTask.priority || 'medium',
+        completed: localTask.completed || false,
+        due_date: localTask.dueDate || null,
+        enable_reminder: localTask.enableReminder || false,
+        subtasks: JSON.stringify(localTask.subtasks || []),
+        attachments: JSON.stringify((localTask.attachments || []).map(a => ({
+          id: a.id,
+          filename: a.filename,
+          type: a.type,
+          filesize: a.filesize,
+        }))),
+        is_recurring: localTask.isRecurring || false,
+        recurring_series_id: localTask.recurringSeriesId || null,
+        instance_date: localTask.instanceDate || null,
+        skipped: localTask.skipped || false,
+        created_at: localTask.createdAt || new Date().toISOString(),
+        updated_at: localTask.updatedAt || new Date().toISOString(),
+        synced_at: new Date().toISOString(),
+        version: (localTask.version || 0) + 1,
+        deleted: false,
+        // B2B fields
+        organization_id: organizationId,
+        workspace_id: workspaceId,
+      };
+
+      const { error: upsertError } = await supabase
+        .from(TABLES.TASKS)
+        .upsert(cloudTask, { onConflict: 'id' });
+
+      if (upsertError) {
+        console.error('Error syncing task to cloud for comments:', upsertError);
+        throw new Error(`No se pudo sincronizar la tarea: ${upsertError.message}`);
+      }
+
+      return true;
+    }
+  } catch (storageError) {
+    console.error('Error accessing local storage:', storageError);
+  }
+
+  throw new Error('La tarea no existe. Por favor, sincroniza tus tareas primero.');
+}
 
 /**
  * Create a new comment on a task
@@ -23,6 +101,9 @@ export async function createComment({
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Must be authenticated');
+
+  // Ensure task exists in Supabase before creating comment
+  await ensureTaskExistsInCloud(taskId, organizationId, workspaceId, user.id);
 
   // Extract mentions from content
   const mentions = extractMentions(content);

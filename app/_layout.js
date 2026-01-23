@@ -1,5 +1,11 @@
 import { Stack } from "expo-router";
+import * as Sentry from "@sentry/react-native";
 import { View, ActivityIndicator } from "react-native";
+
+Sentry.init({
+  dsn: "https://ad8e2e7c8a5d9e82a78f73e6d0bc7add@o4510760428044288.ingest.us.sentry.io/4510760450719744",
+  debug: true,
+});
 import { TaskProvider } from "../context/TaskContext";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import { PomodoroProvider } from "../context/PomodoroContext";
@@ -134,7 +140,7 @@ function RootLayoutNav() {
 
 // Main layout that provides all contexts
 // Provider order: Theme → Auth → Subscription → Organization → Workspace → Stats → Pomodoro → Task
-export default function Layout() {
+function Layout() {
   return (
     <ThemeProvider>
       <AuthProvider>
@@ -155,3 +161,5 @@ export default function Layout() {
     </ThemeProvider>
   );
 }
+
+export default Sentry.wrap(Layout);
