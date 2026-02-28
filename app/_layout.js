@@ -1,3 +1,4 @@
+import 'react-native-url-polyfill/auto';
 import { Stack } from "expo-router";
 import * as Sentry from "@sentry/react-native";
 import { View, ActivityIndicator } from "react-native";
