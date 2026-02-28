@@ -26,6 +26,18 @@
     "plugins": [
       "expo-router",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "35.0.0",
+            "kotlinVersion": "1.9.25",
+            "gradleVersion": "8.6"
+          }
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
@@ -35,7 +47,15 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native",
+          "organization": "bitrova-dev"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -48,6 +68,10 @@
         "projectId": "12452a28-c5cf-40ab-89f0-cd1a7762c089"
       }
     },
-    "owner": "jsoto11"
+    "owner": "jsoto11",
+    "runtimeVersion": "2.3.0",
+    "updates": {
+      "url": "https://u.expo.dev/12452a28-c5cf-40ab-89f0-cd1a7762c089"
+    }
   }
 }

@@ -411,6 +411,46 @@ export const TaskProvider = ({ children }) => {
   }, [tasks]);
 
   /**
+   * Clear all completed tasks
+   */
+  const clearCompletedTasks = useCallback(async () => {
+    const completedTasks = tasks.filter(t => t.completed);
+    
+    for (const task of completedTasks) {
+      if (task.notificationId) {
+        await cancelNotification(task.notificationId);
+      }
+      if (task.attachments?.length > 0) {
+        for (const attachment of task.attachments) {
+          await deleteFile(attachment.localUri);
+        }
+      }
+    }
+
+    setTasks(prev => prev.filter(t => !t.completed));
+  }, [tasks]);
+
+  /**
+   * Clear all data entirely
+   */
+  const clearAllData = useCallback(async () => {
+    // Cancel all notifications and delete all attachments
+    for (const task of tasks) {
+      if (task.notificationId) {
+        await cancelNotification(task.notificationId);
+      }
+      if (task.attachments?.length > 0) {
+        for (const attachment of task.attachments) {
+          await deleteFile(attachment.localUri);
+        }
+      }
+    }
+
+    setTasks([]);
+    setRecurringSeries([]);
+  }, [tasks]);
+
+  /**
    * Add a subtask to a task
    */
   const addSubtask = useCallback((taskId, title) => {
@@ -584,6 +624,8 @@ export const TaskProvider = ({ children }) => {
         toggleCompleted, 
         updateTask,
         getStats,
+        clearCompletedTasks,
+        clearAllData,
         // Recurring task methods
         createRecurringTask,
         addGeneratedTasks,

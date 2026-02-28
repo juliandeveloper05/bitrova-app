@@ -23,7 +23,7 @@ export const isSupabaseConfigured = () => {
 const customStorage = {
   getItem: async (key) => {
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
         return localStorage.getItem(key);
       }
       const value = await AsyncStorage.getItem(key);
@@ -35,7 +35,7 @@ const customStorage = {
   },
   setItem: async (key, value) => {
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem(key, value);
         return;
       }
@@ -46,7 +46,7 @@ const customStorage = {
   },
   removeItem: async (key) => {
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
         localStorage.removeItem(key);
         return;
       }
@@ -63,7 +63,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     storage: customStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: Platform.OS === 'web',
+    detectSessionInUrl: false, // Prevents hanging bugs on Expo Web OAuth parsing
     flowType: 'pkce', // Important for web security
     ...(Platform.OS === 'web' && {
       redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,

@@ -26,7 +26,7 @@ const COLUMN_WIDTH = Math.min(300, SCREEN_WIDTH * 0.85);
 
 export default function KanbanBoard({ onTaskPress, onAddTask }) {
   const { colors, isDarkMode } = useTheme();
-  const { kanbanColumns, currentWorkspace, createKanbanColumn, loading } = useWorkspace();
+  const { kanbanColumns, currentWorkspace, createKanbanColumn, updateKanbanColumn, loading } = useWorkspace();
   const { tasks, updateTask } = useTasks();
   
   const [draggingTask, setDraggingTask] = useState(null);
@@ -102,6 +102,20 @@ export default function KanbanBoard({ onTaskPress, onAddTask }) {
     }
   }, [createKanbanColumn]);
 
+  // Update existing column
+  const handleUpdateColumn = useCallback(async (columnId, updates) => {
+    if (!updateKanbanColumn) {
+      console.warn('updateKanbanColumn is not implemented in WorkspaceContext');
+      return;
+    }
+    
+    try {
+      await updateKanbanColumn(columnId, updates);
+    } catch (error) {
+      console.error('Error updating column:', error);
+    }
+  }, [updateKanbanColumn]);
+
   const styles = createStyles(colors, isDarkMode);
 
   if (loading) {
@@ -176,6 +190,7 @@ export default function KanbanBoard({ onTaskPress, onAddTask }) {
             onDragLeave={() => setDropTargetColumn(null)}
             draggingTask={draggingTask}
             columnWidth={COLUMN_WIDTH}
+            onUpdateColumn={handleUpdateColumn}
           />
         ))}
 

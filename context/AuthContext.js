@@ -79,6 +79,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       setLoading(true);
+      console.log('Attempting sign up...', email);
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -90,11 +91,20 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      if (error) throw error;
-
+      if (error) {
+        console.error('Supabase Auth Error (SignUp):', error.message, error.status);
+        throw error;
+      }
+      
+      console.log('Sign up success:', data);
       return { success: true, user: data.user };
+      
     } catch (error) {
-      console.error('Sign up error:', error);
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('Network failure — likely no connectivity to Supabase:', error);
+      } else {
+        console.error('Unexpected Sign Up error:', error);
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -111,17 +121,27 @@ export const AuthProvider = ({ children }) => {
 
     try {
       setLoading(true);
+      console.log('Attempting sign in...', email);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase Auth Error (SignIn):', error.message, error.status);
+        throw error;
+      }
 
+      console.log('Sign in success:', data);
       return { success: true, user: data.user };
+      
     } catch (error) {
-      console.error('Sign in error:', error);
+       if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('Network failure — likely no connectivity to Supabase:', error);
+      } else {
+        console.error('Unexpected Sign In error:', error);
+      }
       throw error;
     } finally {
       setLoading(false);
