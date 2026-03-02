@@ -84,7 +84,7 @@ const SectionHeader = ({ title, delay = 0, colors }) => (
 
 export default function Settings() {
   const router = useRouter();
-  const { tasks, notificationsEnabled } = useContext(TaskContext);
+  const { tasks, notificationsEnabled, clearCompletedTasks, clearAllData } = useContext(TaskContext);
   const { isDarkMode, toggleTheme, colors, selectedColorTheme, selectedFontSize, setFontSize } = useTheme();
   const { signOut, user, getDisplayName } = useAuth();
   
@@ -104,7 +104,6 @@ export default function Settings() {
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(t => t.completed).length;
 
-  // Handle clear completed tasks
   const handleClearCompleted = () => {
     const completedCount = tasks.filter(t => t.completed).length;
     
@@ -121,8 +120,8 @@ export default function Settings() {
         { 
           text: 'Eliminar', 
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement clear completed in TaskContext
+          onPress: async () => {
+            await clearCompletedTasks();
             Alert.alert('Éxito', 'Tareas completadas eliminadas.');
           }
         },
@@ -140,8 +139,8 @@ export default function Settings() {
         { 
           text: 'Eliminar todo', 
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement clear all in TaskContext
+          onPress: async () => {
+            await clearAllData();
             Alert.alert('Datos eliminados', 'Todos los datos han sido eliminados.');
           }
         },

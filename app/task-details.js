@@ -172,18 +172,8 @@ export default function TaskDetails() {
       setHasChanges(changed);
     }
   }, [title, description, selectedCategory, selectedPriority, dueDate, enableReminder, task]);
-  
-  if (!task) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, styles.centered]}>
-        <Text style={[styles.errorText, { color: colors.textSecondary }]}>Tarea no encontrada</Text>
-        <Pressable style={styles.backLink} onPress={() => router.back()}>
-          <Text style={[styles.backLinkText, { color: colors.accentPurple }]}>Volver</Text>
-        </Pressable>
-      </View>
-    );
-  }
 
+  // ⬇️ HOOKS MOVIDOS ARRIBA DEL IF - Deben ejecutarse siempre en el mismo orden
   // Validate title on change
   const handleTitleChange = useCallback((text) => {
     setTitle(text);
@@ -238,7 +228,19 @@ export default function TaskDetails() {
       safeHaptics.notification(Haptics.NotificationFeedbackType.Error);
       return false;
     }
-  }, [title, selectedCategory, selectedPriority, dueDate, enableReminder, taskId, updateTask, router]);
+  }, [title, description, selectedCategory, selectedPriority, dueDate, enableReminder, taskId, updateTask, router]);
+  
+  // ⬇️ EARLY RETURN - Ahora DESPUÉS de todos los hooks
+  if (!task) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, styles.centered]}>
+        <Text style={[styles.errorText, { color: colors.textSecondary }]}>Tarea no encontrada</Text>
+        <Pressable style={styles.backLink} onPress={() => router.back()}>
+          <Text style={[styles.backLinkText, { color: colors.accentPurple }]}>Volver</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   // Modal handlers
   const handleModalSave = async () => {

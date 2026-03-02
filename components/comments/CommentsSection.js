@@ -1,11 +1,9 @@
 /**
- * Comments Section Component
+ * Comments Section Component (Debug Version)
  * Bitrova TaskList App - Phase 3 B2B
- * 
- * Drop-in comments section for task details
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -27,7 +25,7 @@ export default function CommentsSection({ taskId, collapsed = true }) {
   const {
     comments,
     loading,
-    error,
+    error: loadError,
     addComment,
     replyToComment,
     editComment,
@@ -37,45 +35,55 @@ export default function CommentsSection({ taskId, collapsed = true }) {
     organizationId,
   } = useComments(taskId);
 
-  const [isExpanded, setIsExpanded] = React.useState(!collapsed);
-  const [replyingTo, setReplyingTo] = React.useState(null);
+  const [isExpanded, setIsExpanded] = useState(!collapsed);
+  const [replyingTo, setReplyingTo] = useState(null);
+  
+  // 🚨 NUEVO: Estado para capturar el error y mostrarlo en pantalla
+  const [submitError, setSubmitError] = useState(null);
 
   const handleToggle = useCallback(() => {
     setIsExpanded((prev) => !prev);
   }, []);
 
   const handleAddComment = useCallback(async (content) => {
+    setSubmitError(null); // Limpiamos errores previos
     try {
       await addComment(content);
     } catch (error) {
       console.error('Error adding comment:', error);
+      // Guardamos el mensaje para mostrarlo en la UI
+      setSubmitError(error.message || 'Error desconocido al enviar');
     }
   }, [addComment]);
 
   const handleReply = useCallback((comment) => {
     setReplyingTo(comment);
+    setSubmitError(null);
   }, []);
 
   const handleSubmitReply = useCallback(async (content) => {
     if (replyingTo) {
+      setSubmitError(null);
       try {
         await replyToComment(replyingTo.id, content);
         setReplyingTo(null);
       } catch (error) {
         console.error('Error replying:', error);
+        setSubmitError(error.message || 'Error al responder');
       }
     }
   }, [replyingTo, replyToComment]);
 
   const cancelReply = useCallback(() => {
     setReplyingTo(null);
+    setSubmitError(null);
   }, []);
 
   const styles = createStyles(colors, isDarkMode);
 
   return (
     <View style={styles.container}>
-      {/* Header - Collapsible */}
+      {/* Header */}
       <TouchableOpacity style={styles.header} onPress={handleToggle}>
         <View style={styles.headerLeft}>
           <View style={styles.iconContainer}>
@@ -98,6 +106,16 @@ export default function CommentsSection({ taskId, collapsed = true }) {
       {/* Content */}
       {isExpanded && (
         <View style={styles.content}>
+          
+          {/* 🚨 ZONA DE ERROR VISIBLE 🚨 */}
+          {submitError && (
+            <View style={{ padding: 12, backgroundColor: '#ffebee', borderBottomWidth: 1, borderBottomColor: '#ffcdd2' }}>
+              <Text style={{ color: '#c62828', fontWeight: 'bold' }}>
+                ❌ Error: {submitError}
+              </Text>
+            </View>
+          )}
+
           {/* Comment Input */}
           {user && organizationId && (
             <CommentInput
@@ -138,10 +156,10 @@ export default function CommentsSection({ taskId, collapsed = true }) {
             </View>
           )}
 
-          {/* Error State */}
-          {error && (
+          {/* Load Error State */}
+          {loadError && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>Error loading: {loadError}</Text>
               <TouchableOpacity onPress={refresh}>
                 <Text style={styles.retryText}>Retry</Text>
               </TouchableOpacity>

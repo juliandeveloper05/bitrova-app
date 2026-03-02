@@ -56,10 +56,11 @@ export const setLastSyncTime = async (date = new Date()) => {
 /**
  * Convert local task to cloud format
  */
-const taskToCloudFormat = (task, userId) => {
+const taskToCloudFormat = (task, userId, activeOrgId = null) => {
   return {
     id: task.id,
     user_id: userId,
+    organization_id: activeOrgId || null, // Multi-tenant isolation (Phase 3)
     title: task.title,
     description: task.description || null,
     category: task.category || 'personal',
@@ -122,7 +123,7 @@ const taskToLocalFormat = (cloudTask) => {
  * @param {Array} localTasks - Local tasks to sync
  * @returns {Promise<Object>} Sync result
  */
-export const uploadToCloud = async (localTasks) => {
+export const uploadToCloud = async (localTasks, activeOrgId = null) => {
   if (!isSupabaseConfigured()) {
     throw new Error('Supabase no está configurado');
   }
@@ -133,7 +134,7 @@ export const uploadToCloud = async (localTasks) => {
   }
 
   try {
-    const cloudTasks = localTasks.map(task => taskToCloudFormat(task, userId));
+    const cloudTasks = localTasks.map(task => taskToCloudFormat(task, userId, activeOrgId));
     
     // Upsert tasks in batches
     const batchSize = SYNC_CONFIG.BATCH_SIZE;
@@ -174,7 +175,7 @@ export const uploadToCloud = async (localTasks) => {
  * Download tasks from cloud
  * @returns {Promise<Array>} Cloud tasks in local format
  */
-export const downloadFromCloud = async () => {
+export const downloadFromCloud = async (activeOrgId = null) => {
   if (!isSupabaseConfigured()) {
     throw new Error('Supabase no está configurado');
   }
@@ -185,12 +186,20 @@ export const downloadFromCloud = async () => {
   }
 
   try {
-    const { data, error } = await supabase
+    // Multi-tenant query branching (Phase 3 — Milestone 4)
+    let query = supabase
       .from(TABLES.TASKS)
       .select('*')
-      .eq('user_id', userId)
       .eq('deleted', false)
       .order('updated_at', { ascending: false });
+
+    if (activeOrgId) {
+      query = query.eq('organization_id', activeOrgId);
+    } else {
+      query = query.eq('user_id', userId).is('organization_id', null);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error downloading from cloud:', error);
@@ -210,7 +219,7 @@ export const downloadFromCloud = async () => {
  * @param {Array} localTasks - Current local tasks
  * @returns {Promise<Object>} Sync result with merged tasks
  */
-export const syncTasks = async (localTasks) => {
+export const syncTasks = async (localTasks, activeOrgId = null) => {
   if (!isSupabaseConfigured()) {
     return {
       success: false,
@@ -232,8 +241,8 @@ export const syncTasks = async (localTasks) => {
     const userId = await getCurrentUserId();
     const lastSync = await getLastSyncTime();
 
-    // Get cloud tasks
-    const cloudTasks = await downloadFromCloud();
+    // Get cloud tasks — scoped by activeOrgId
+    const cloudTasks = await downloadFromCloud(activeOrgId);
     
     // Build maps for comparison
     const localMap = new Map(localTasks.map(t => [t.id, t]));
@@ -289,7 +298,7 @@ export const syncTasks = async (localTasks) => {
 
     // Upload local-only tasks to cloud
     if (toUpload.length > 0) {
-      const uploadTasks = toUpload.map(t => taskToCloudFormat(t, userId));
+      const uploadTasks = toUpload.map(t => taskToCloudFormat(t, userId, activeOrgId));
       
       const { error } = await supabase
         .from(TABLES.TASKS)

@@ -31,6 +31,7 @@ export default function KanbanColumn({
   onDragLeave,
   draggingTask,
   columnWidth,
+  onUpdateColumn,
 }) {
   const { colors, isDarkMode } = useTheme();
   const { updateWorkspace } = useWorkspace();
@@ -42,10 +43,11 @@ export default function KanbanColumn({
   const handleNameSave = useCallback(async () => {
     setIsEditing(false);
     if (columnName !== column.name && column.id !== 'uncategorized') {
-      // TODO: Add column update function
-      // await updateColumn(column.id, { name: columnName });
+      if (onUpdateColumn) {
+        onUpdateColumn(column.id, { name: columnName });
+      }
     }
-  }, [columnName, column]);
+  }, [columnName, column, onUpdateColumn]);
 
   // Calculate task count and WIP status
   const taskCount = tasks.length;

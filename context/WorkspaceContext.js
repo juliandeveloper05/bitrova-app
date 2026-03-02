@@ -186,6 +186,25 @@ export const WorkspaceProvider = ({ children }) => {
   }, [currentWorkspace, kanbanColumns]);
 
   /**
+   * Update kanban column
+   */
+  const updateKanbanColumn = useCallback(async (columnId, updates) => {
+    if (!currentWorkspace) throw new Error('No workspace selected');
+
+    const { data: column, error } = await supabase
+      .from(TABLES.KANBAN_COLUMNS)
+      .update(updates)
+      .eq('id', columnId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    setKanbanColumns(prev => prev.map(c => c.id === columnId ? { ...c, ...column } : c));
+    return column;
+  }, [currentWorkspace]);
+
+  /**
    * Reorder kanban columns
    */
   const reorderColumns = useCallback(async (columnId, newPosition) => {
@@ -319,6 +338,7 @@ export const WorkspaceProvider = ({ children }) => {
     // Kanban
     loadKanbanColumns,
     createKanbanColumn,
+    updateKanbanColumn,
     reorderColumns,
 
     // Helpers
