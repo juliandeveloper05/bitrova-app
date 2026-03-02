@@ -11,11 +11,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { spacing, typography } from '../constants/theme';
+import OrganizationSwitcher from './OrganizationSwitcher';
+import useOrgPermissions from '../hooks/useOrgPermissions';
 
 export default function Header() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user, getDisplayName } = useAuth();
+  const { isAdmin } = useOrgPermissions();
   
   const today = new Date();
   const options = { weekday: 'long', day: 'numeric', month: 'long' };
@@ -43,6 +46,7 @@ export default function Header() {
           {greeting}{userName ? `, ${userName}` : ''} 👋
         </Text>
         <Text style={[styles.date, { color: colors.textPrimary }]}>{displayDate}</Text>
+        <OrganizationSwitcher />
       </View>
       
       <View style={styles.buttonsContainer}>
@@ -64,14 +68,16 @@ export default function Header() {
           <Ionicons name="stats-chart" size={22} color={colors.accentPurple} />
         </TouchableOpacity>
         
-        {/* Settings Button */}
-        <TouchableOpacity 
-          style={[styles.headerButton, { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder }]}
-          onPress={() => router.push('/settings')}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
+        {/* Settings Button — only for admins/owners (M3 UI guard) */}
+        {isAdmin && (
+          <TouchableOpacity 
+            style={[styles.headerButton, { backgroundColor: colors.glassMedium, borderColor: colors.glassBorder }]}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+        )}
       </View>
     </Animated.View>
   );

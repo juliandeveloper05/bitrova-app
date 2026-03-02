@@ -134,6 +134,12 @@ function RootLayoutNav() {
             animation: "fade",
           }}
         />
+        <Stack.Screen 
+          name="accept-invite" 
+          options={{
+            animation: "fade",
+          }}
+        />
       </Stack>
     </>
   );
